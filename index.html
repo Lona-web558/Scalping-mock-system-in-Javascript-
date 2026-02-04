@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expert Options Trading System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-dark: #1a1d29;
+            --secondary-dark: #252834;
+            --accent-green: #26a69a;
+            --accent-red: #ef5350;
+            --text-light: #e0e0e0;
+            --border-color: #3a3d4a;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1d29 0%, #252834 100%);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--secondary-dark);
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            margin-bottom: 2rem;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, var(--accent-green) 0%, #1e8578 100%);
+            border-radius: 10px;
+            padding: 1.5rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(38, 166, 154, 0.3);
+        }
+
+        .asset-card {
+            background: var(--secondary-dark);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+        }
+
+        .asset-card.active {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(38, 166, 154, 0.3);
+        }
+
+        .price-up { color: var(--accent-green); }
+        .price-down { color: var(--accent-red); }
+
+        .trade-panel {
+            background: var(--secondary-dark);
+            border-radius: 10px;
+            padding: 2rem;
+            border: 1px solid var(--border-color);
+            position: sticky;
+            top: 20px;
+        }
+
+        .btn-call {
+            background: var(--accent-green);
+            border: none;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-call:hover {
+            background: #1e8578;
+            transform: scale(1.05);
+        }
+
+        .btn-put {
+            background: var(--accent-red);
+            border: none;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-put:hover {
+            background: #d32f2f;
+            transform: scale(1.05);
+        }
+
+        .chart-container {
+            background: var(--secondary-dark);
+            border-radius: 10px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            height: 400px;
+            margin-bottom: 2rem;
+        }
+
+        .position-card {
+            background: var(--secondary-dark);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid var(--accent-green);
+        }
+
+        .position-card.put {
+            border-left-color: var(--accent-red);
+        }
+
+        .timer {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .amount-input {
+            background: var(--primary-dark);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            padding: 0.75rem;
+            font-size: 1.2rem;
+        }
+
+        .amount-input:focus {
+            background: var(--primary-dark);
+            color: var(--text-light);
+            border-color: var(--accent-green);
+            box-shadow: 0 0 0 0.2rem rgba(38, 166, 154, 0.25);
+        }
+
+        .quick-amount {
+            background: var(--primary-dark);
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            transition: all 0.2s;
+        }
+
+        .quick-amount:hover {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .stats-card {
+            background: var(--secondary-dark);
+            border-radius: 10px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        canvas {
+            max-height: 350px;
+        }
+
+        .payout-badge {
+            background: rgba(38, 166, 154, 0.2);
+            color: var(--accent-green);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h3><i class="fas fa-chart-line"></i> Expert Options</h3>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="timer" id="serverTime">00:00:00</div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="balance-card d-inline-block">
+                        <small>Balance</small>
+                        <h4 class="mb-0">$<span id="balance">10000.00</span></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <i class="fas fa-trophy fa-2x mb-2" style="color: var(--accent-green)"></i>
+                    <h5>Win Rate</h5>
+                    <h3 id="winRate">0%</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <i class="fas fa-chart-line fa-2x mb-2" style="color: var(--accent-green)"></i>
+                    <h5>Total Trades</h5>
+                    <h3 id="totalTrades">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <i class="fas fa-dollar-sign fa-2x mb-2" style="color: var(--accent-green)"></i>
+                    <h5>Total Profit</h5>
+                    <h3 id="totalProfit">$0.00</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <i class="fas fa-fire fa-2x mb-2" style="color: #ff9800"></i>
+                    <h5>Active Positions</h5>
+                    <h3 id="activePositions">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+
+                <h5 class="mb-3">Available Assets</h5>
+                <div class="row" id="assetsList">
+                    <!-- Assets will be populated here -->
+                </div>
+
+                <h5 class="mt-4 mb-3">Active Positions</h5>
+                <div id="positionsList">
+                    <p class="text-muted">No active positions</p>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="trade-panel">
+                    <h5 class="mb-3">Trade Panel</h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Selected Asset</label>
+                        <input type="text" class="form-control amount-input" id="selectedAsset" readonly value="EUR/USD">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Current Price</label>
+                        <h4 id="currentPrice" class="text-center">1.0850</h4>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Investment Amount</label>
+                        <input type="number" class="form-control amount-input" id="investAmount" value="100" min="10" max="10000">
+                        <div class="btn-group w-100 mt-2">
+                            <button class="btn quick-amount" onclick="setAmount(50)">$50</button>
+                            <button class="btn quick-amount" onclick="setAmount(100)">$100</button>
+                            <button class="btn quick-amount" onclick="setAmount(500)">$500</button>
+                            <button class="btn quick-amount" onclick="setAmount(1000)">$1000</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Expiry Time</label>
+                        <select class="form-select amount-input" id="expiryTime">
+                            <option value="60">1 Minute</option>
+                            <option value="300">5 Minutes</option>
+                            <option value="900">15 Minutes</option>
+                            <option value="1800">30 Minutes</option>
+                            <option value="3600">1 Hour</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Payout</label>
+                        <div class="payout-badge w-100">
+                            <span id="payoutPercent">85%</span> - $<span id="payoutAmount">185.00</span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-call btn-lg" onclick="placeTrade('call')">
+                            <i class="fas fa-arrow-up"></i> CALL (Higher)
+                        </button>
+                        <button class="btn btn-put btn-lg" onclick="placeTrade('put')">
+                            <i class="fas fa-arrow-down"></i> PUT (Lower)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.umd.min.js"></script>
+    <script>
+        // Mock API Data
+        const assets = [
+            { id: 1, name: 'EUR/USD', price: 1.0850, payout: 85, volatility: 0.0002 },
+            { id: 2, name: 'GBP/USD', price: 1.2640, payout: 82, volatility: 0.0003 },
+            { id: 3, name: 'USD/JPY', price: 149.85, payout: 80, volatility: 0.05 },
+            { id: 4, name: 'BTC/USD', price: 35420.00, payout: 88, volatility: 50 },
+            { id: 5, name: 'GOLD', price: 2025.50, payout: 83, volatility: 2 },
+            { id: 6, name: 'OIL', price: 78.45, payout: 81, volatility: 0.5 }
+        ];
+
+        let selectedAsset = assets[0];
+        let balance = 10000;
+        let positions = [];
+        let priceHistory = [];
+        let chart = null;
+        let stats = { wins: 0, losses: 0, profit: 0 };
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Price',
+                        data: [],
+                        borderColor: '#26a69a',
+                        backgroundColor: 'rgba(38, 166, 154, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update prices (mock API simulation)
+        function updatePrices() {
+            assets.forEach(asset => {
+                const change = (Math.random() - 0.5) * asset.volatility;
+                asset.prevPrice = asset.price;
+                asset.price += change;
+                asset.price = Math.max(asset.price, 0.01);
+            });
+
+            // Update chart
+            const now = new Date().toLocaleTimeString();
+            priceHistory.push({ time: now, price: selectedAsset.price });
+            if (priceHistory.length > 50) priceHistory.shift();
+
+            chart.data.labels = priceHistory.map(p => p.time);
+            chart.data.datasets[0].data = priceHistory.map(p => p.price);
+            chart.update('none');
+
+            updateUI();
+            checkPositions();
+        }
+
+        // Update UI
+        function updateUI() {
+            document.getElementById('balance').textContent = balance.toFixed(2);
+            document.getElementById('currentPrice').textContent = selectedAsset.price.toFixed(selectedAsset.name.includes('BTC') ? 2 : 4);
+            
+            const amount = parseFloat(document.getElementById('investAmount').value) || 100;
+            const payout = selectedAsset.payout;
+            document.getElementById('payoutPercent').textContent = payout + '%';
+            document.getElementById('payoutAmount').textContent = (amount * (1 + payout/100)).toFixed(2);
+
+            // Update assets list
+            const assetsList = document.getElementById('assetsList');
+            assetsList.innerHTML = assets.map(asset => {
+                const priceChange = asset.prevPrice ? ((asset.price - asset.prevPrice) / asset.prevPrice * 100) : 0;
+                const priceClass = priceChange >= 0 ? 'price-up' : 'price-down';
+                const icon = priceChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+                const active = asset.id === selectedAsset.id ? 'active' : '';
+                
+                return `
+                    <div class="col-md-6">
+                        <div class="asset-card ${active}" onclick="selectAsset(${asset.id})">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">${asset.name}</h6>
+                                    <small class="text-muted">Payout: ${asset.payout}%</small>
+                                </div>
+                                <div class="text-end">
+                                    <h5 class="${priceClass} mb-0">
+                                        ${asset.price.toFixed(asset.name.includes('BTC') ? 2 : 4)}
+                                    </h5>
+                                    <small class="${priceClass}">
+                                        <i class="fas ${icon}"></i> ${Math.abs(priceChange).toFixed(2)}%
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update stats
+            const totalTrades = stats.wins + stats.losses;
+            const winRate = totalTrades > 0 ? (stats.wins / totalTrades * 100).toFixed(1) : 0;
+            document.getElementById('winRate').textContent = winRate + '%';
+            document.getElementById('totalTrades').textContent = totalTrades;
+            document.getElementById('totalProfit').textContent = '$' + stats.profit.toFixed(2);
+            document.getElementById('activePositions').textContent = positions.length;
+        }
+
+        // Select asset
+        function selectAsset(assetId) {
+            selectedAsset = assets.find(a => a.id === assetId);
+            document.getElementById('selectedAsset').value = selectedAsset.name;
+            priceHistory = [];
+            updateUI();
+        }
+
+        // Set investment amount
+        function setAmount(amount) {
+            document.getElementById('investAmount').value = amount;
+            updateUI();
+        }
+
+        // Place trade
+        function placeTrade(type) {
+            const amount = parseFloat(document.getElementById('investAmount').value);
+            
+            if (amount < 10 || amount > balance) {
+                alert('Invalid investment amount!');
+                return;
+            }
+
+            const expiry = parseInt(document.getElementById('expiryTime').value);
+            const position = {
+                id: Date.now(),
+                asset: selectedAsset.name,
+                type: type,
+                entryPrice: selectedAsset.price,
+                amount: amount,
+                payout: selectedAsset.payout,
+                expiryTime: Date.now() + (expiry * 1000),
+                expiry: expiry
+            };
+
+            positions.push(position);
+            balance -= amount;
+            updatePositionsList();
+            updateUI();
+        }
+
+        // Update positions list
+        function updatePositionsList() {
+            const list = document.getElementById('positionsList');
+            
+            if (positions.length === 0) {
+                list.innerHTML = '<p class="text-muted">No active positions</p>';
+                return;
+            }
+
+            list.innerHTML = positions.map(pos => {
+                const timeLeft = Math.max(0, Math.floor((pos.expiryTime - Date.now()) / 1000));
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                const currentAsset = assets.find(a => a.name === pos.asset);
+                const currentPrice = currentAsset ? currentAsset.price : pos.entryPrice;
+                const inMoney = (pos.type === 'call' && currentPrice > pos.entryPrice) || 
+                               (pos.type === 'put' && currentPrice < pos.entryPrice);
+                
+                return `
+                    <div class="position-card ${pos.type}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${pos.asset} - ${pos.type.toUpperCase()}</h6>
+                                <small>Entry: ${pos.entryPrice.toFixed(4)} | Amount: $${pos.amount}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="badge ${inMoney ? 'bg-success' : 'bg-danger'} mb-1">
+                                    ${inMoney ? 'In Money' : 'Out Money'}
+                                </div>
+                                <div><strong>${minutes}:${seconds.toString().padStart(2, '0')}</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Check positions for expiry
+        function checkPositions() {
+            const now = Date.now();
+            positions = positions.filter(pos => {
+                if (now >= pos.expiryTime) {
+                    const currentAsset = assets.find(a => a.name === pos.asset);
+                    const finalPrice = currentAsset.price;
+                    const won = (pos.type === 'call' && finalPrice > pos.entryPrice) || 
+                               (pos.type === 'put' && finalPrice < pos.entryPrice);
+                    
+                    if (won) {
+                        const profit = pos.amount * (pos.payout / 100);
+                        balance += pos.amount + profit;
+                        stats.wins++;
+                        stats.profit += profit;
+                    } else {
+                        stats.losses++;
+                        stats.profit -= pos.amount;
+                    }
+                    
+                    return false;
+                }
+                return true;
+            });
+            
+            updatePositionsList();
+        }
+
+        // Update server time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('serverTime').textContent = now.toLocaleTimeString();
+        }
+
+        // Initialize
+        initChart();
+        updatePrices();
+        updateUI();
+        setInterval(updatePrices, 1000);
+        setInterval(updateTime, 1000);
+        setInterval(updatePositionsList, 100);
+    </script>
+</body>
+</html>
